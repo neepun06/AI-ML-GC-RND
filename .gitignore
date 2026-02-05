@@ -1,0 +1,23 @@
+# Security (NEVER PUSH THESE)
+.env
+.env.local
+
+# Python & Environment
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Temporary & Debug Files
+debug_response.txt
+*_FULL_CONTEXT.txt
+*.log
+
+# OS Generated
+.DS_Store
+Thumbs.db
+
+# Optional: Ignore generated outputs if you only want to track code
+# Final_Submissions/
+# *_ANALYSIS.json
