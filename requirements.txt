@@ -2,3 +2,11 @@ python-pptx
 google-generativeai
 python-dotenv
 requests
+llama-parse
+tavily-python
+python-docx
+
+lxml
+Pillow
+openpyxl
+pandas
