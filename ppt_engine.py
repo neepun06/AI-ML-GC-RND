@@ -22,6 +22,19 @@ THEME = {
     "border_light": RGBColor(220, 220, 230)
 }
 
+""" dimensions and typography are defined in one place for consistency and easy adjustments """
+
+SLIDE_W = Inches(13.333)
+SLIDE_H = Inches(7.5)
+
+MARGIN = Inches(0.5)
+GUTTER = Inches(0.3)
+
+CONTENT_W = SLIDE_W - (MARGIN * 2)
+
+COL2_W = (CONTENT_W - GUTTER) / 2
+COL3_W = (CONTENT_W - GUTTER * 2) / 3
+
 class TextStyler:
     """Centralized Typography Control"""
     @staticmethod
@@ -82,17 +95,10 @@ def add_header(slide, company_name, sector, tagline=None):
     p2.text = final_tag
     TextStyler.subtitle(p2.runs[0] if p2.runs else p2.add_run())
 
-    # Logo Box (Fail-safe)
-    logo_bg = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(11.5), Inches(0.3), Inches(1.5), Inches(0.7))
-    logo_bg.fill.solid()
-    logo_bg.fill.fore_color.rgb = THEME["white"]
-    logo_bg.line.fill.background()
+
     
     if os.path.exists("logo.png"):
         slide.shapes.add_picture("logo.png", Inches(11.6), Inches(0.35), height=Inches(0.6))
-    else:
-        logo_bg.text_frame.text = "KELP LOGO"
-        logo_bg.text_frame.paragraphs[0].font.color.rgb = THEME["primary"]
 
 def add_footer(slide):
     box = slide.shapes.add_textbox(Inches(0), Inches(7.15), Inches(13.3), Inches(0.3))
@@ -318,6 +324,40 @@ def build_slide_3(prs, data):
         
         y += Inches(1.7)
 
+def build_slide_4(prs):
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    slide.background.fill.solid()
+    slide.background.fill.fore_color.rgb = THEME["bg_slide"]
+
+    add_header(slide, "Important Notice & Disclaimer", "")
+    add_footer(slide)
+
+    draw_container(slide, MARGIN, Inches(1.6),
+                   CONTENT_W, Inches(5.5))
+
+    disclaimer = (
+        "Strictly Private & Confidential. Prepared exclusively for the intended recipient. "
+        "This presentation is informational and not an offer to sell securities. "
+        "Information believed reliable but not guaranteed. Forward-looking statements "
+        "and projections may vary materially from actual results."
+    )
+
+    tb = slide.shapes.add_textbox(
+        MARGIN + Inches(0.3),
+        Inches(2.3),
+        CONTENT_W - Inches(0.6),
+        Inches(4.8)
+    )
+
+    tf = tb.text_frame
+    tf.word_wrap = True
+
+    p = tf.paragraphs[0]
+    p.text = disclaimer
+    TextStyler.body(p.runs[0] if p.runs else p.add_run(), size=19)
+
+
+
 
 # ==========================================
 # 4. MAIN RUNNER
@@ -342,6 +382,7 @@ def generate_deck(company_name):
         build_slide_1(prs, data)
         build_slide_2(prs, data)
         build_slide_3(prs, data)
+        build_slide_4(prs)
         
         out_path = f"Final_Submissions/{company_name}_Teaser_Atomic.pptx"
         if not os.path.exists("Final_Submissions"):
