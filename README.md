@@ -56,26 +56,12 @@ We solves this by enforcing:
 ---
 
 ## 🏗️ Architecture Overview
-```
-flowchart TD
 
-    A[Private Data<br/>(PDF · Excel · MD · TXT)] --> B[Ingestion Layer(ingest.py)]
+The system follows a GenAI-adapted ETL pipeline that converts unstructured company data into
+investment-grade outputs via structured LLM extraction and deterministic rendering.
 
-    B --> C[Public Web Search<br/>(Tavily)]
-    C --> D[Unified Context]
+![Architecture Overview](assets/architecture_overview.png)
 
-    B --> D
-    D --> E[LLM Extraction Agent<br/>(analyze.py)]
-
-    E --> F[Structured JSON]
-
-    F --> G[PPT Engine<br/>(ppt_engine.py)]
-    F --> H[Citation Engine<br/>(generate_citations.py)]
-
-    G --> I[Teaser Deck]
-    H --> J[Source Audit Document]
-
-```
 
 ---
 
