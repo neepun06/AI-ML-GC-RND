@@ -2,7 +2,7 @@
 
 > **An end-to-end AI pipeline that converts unstructured company data into investment-grade M&A teaser decks.**
 
-KELP is a deterministic, reproducible pipeline designed to **automate the early-stage investment analysis workflow** typically performed by junior investment banking and private equity teams.
+This is a deterministic, reproducible pipeline designed to **automate the early-stage investment analysis workflow** typically performed by junior investment banking and private equity teams.
 
 It ingests raw company data (PDFs, Excel models, Markdown briefs), enriches it with targeted public-web intelligence, extracts **high-density, non-marketing investment facts** using a rigorously constrained LLM agent, and programmatically renders:
 
@@ -26,7 +26,7 @@ Early-stage M&A analysis suffers from three structural problems:
 3. **Manual slide production**  
    Analysts spend hours formatting decks instead of thinking.
 
-KELP solves this by enforcing:
+We solves this by enforcing:
 - **data density over prose**
 - **strict schemas over free-form text**
 - **code-driven slide construction**
@@ -249,7 +249,7 @@ Users interact via a simple numeric menu.
 
 ```bash
 git clone https://github.com/neepun06/AI-ML-GC-RND.git
-cd kelp
+cd AI-ML-GC-RND
 ```
 
 ### 2️⃣ Create Virtual Environment
@@ -296,7 +296,7 @@ python main.py
 
 ### Step 3: Select input
 ```
---- KELP GENERATOR ---
+--- GENERATOR ---
 Files and Data Pack Folders found:
 [1] [FOLDER] Company_Data
 [2] [FILE]   Company-OnePager.md
