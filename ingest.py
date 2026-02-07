@@ -3,6 +3,7 @@ import time
 from dotenv import load_dotenv
 from llama_parse import LlamaParse
 from tavily import TavilyClient
+import pandas as pd
 
 # 1. LOAD API KEYS
 load_dotenv()
@@ -42,25 +43,34 @@ def get_public_data(company_name):
     return combined_context
 
 def ingest_private_file(file_path):
-    """
-    Decides how to read the file based on extension.
-    - PDF: Uses LlamaParse (AI Vision) -> For Test Data
-    - MD: Uses standard read -> For Example Data
-    """
     print(f"📂 Ingesting file: {file_path}")
     
     if file_path.endswith(".pdf"):
-        # The 'Heavy Lifting' for tomorrow's test data
+        # LlamaParse is great for complex PDFs
         documents = parser.load_data(file_path)
         return f"\n\n--- PRIVATE FILE CONTENT (PDF) ---\n{documents[0].text}\n"
     
-    elif file_path.endswith(".md"):
-        # Simple read for the provided example files
+    elif file_path.endswith(".md") or file_path.endswith(".txt"):
+        # Handle simple text files too
         with open(file_path, "r", encoding="utf-8") as f:
-            return f"\n\n--- PRIVATE FILE CONTENT (MARKDOWN) ---\n{f.read()}\n"
+            return f"\n\n--- PRIVATE FILE CONTENT (TEXT) ---\n{f.read()}\n"
+
+    elif file_path.endswith(".xlsx") or file_path.endswith(".xls"):
+        # Basic Excel Handler - dumps all sheets to string
+        try:
+            df_dict = pd.read_excel(file_path, sheet_name=None)
+            text_output = ""
+            for sheet_name, df in df_dict.items():
+                text_output += f"\nSheet: {sheet_name}\n{df.to_string()}\n"
+            return f"\n\n--- PRIVATE FILE CONTENT (EXCEL) ---\n{text_output}\n"
+        except Exception as e:
+            print(f"⚠️ Excel ingest failed: {e}")
+            return ""
     
     else:
-        raise ValueError("Unsupported file format. Only .pdf and .md supported.")
+        # Don't crash on unknown files, just skip them
+        print(f"⚠️ Skipping unsupported file: {file_path}")
+        return ""
 
 def build_full_context(file_path, company_name):
     """
