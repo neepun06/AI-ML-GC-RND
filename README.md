@@ -56,40 +56,33 @@ KELP solves this by enforcing:
 ---
 
 ## 🏗️ Architecture Overview
+```
+flowchart TD
 
-The system follows a **GenAI-adapted ETL pipeline**:
+    A[Private Data<br/>(PDF · Excel · MD · TXT)] --> B[Ingestion Layer(ingest.py)]
 
-Private Data (PDF / Excel / MD)
-|
-v
-Ingestion Layer
-(ingest.py)
-|
-+---- Public Web Search (Tavily)
-|
-v
-Unified Context
-|
-v
-LLM Extraction Agent
-(analyze.py)
-|
-v
-Structured JSON
-|
-+------+----------------+
-| |
-v v
-PPT Engine Citation Engine
-(ppt_engine.py) (generate_citations.py)
-| |
-v v
-Teaser Deck Source Audit Doc
+    B --> C[Public Web Search<br/>(Tavily)]
+    C --> D[Unified Context]
 
+    B --> D
+    D --> E[LLM Extraction Agent<br/>(analyze.py)]
+
+    E --> F[Structured JSON]
+
+    F --> G[PPT Engine<br/>(ppt_engine.py)]
+    F --> H[Citation Engine<br/>(generate_citations.py)]
+
+    G --> I[Teaser Deck]
+    H --> J[Source Audit Document]
+
+```
 
 ---
 
 ## 📁 Project Structure
+
+```
+.
 ├── analyze.py # LLM agent & extraction logic
 ├── ingest.py # Data ingestion + web enrichment
 ├── ppt_engine.py # Programmatic PowerPoint renderer
@@ -100,6 +93,7 @@ Teaser Deck Source Audit Doc
 ├── requirements.txt # Python dependencies
 ├── examples/ # INPUT: files or data-pack folders
 └── Final_Submissions/ # OUTPUT: PPT + citations
+```
 
 
 ---
@@ -253,9 +247,10 @@ Users interact via a simple numeric menu.
 
 ### 1️⃣ Clone Repository
 
-bash
+```bash
 git clone https://github.com/neepun06/AI-ML-GC-RND.git
 cd kelp
+```
 
 ### 2️⃣ Create Virtual Environment
 python -m venv venv
@@ -263,43 +258,58 @@ source venv/bin/activate        # macOS / Linux
 venv\Scripts\activate           # Windows
 
 ### 3️⃣ Install Dependencies
+```
 pip install -r requirements.txt
+```
 
 ### 4️⃣ Configure Environment Variables
+
 Create a .env file in the project root:
+```
 GEMINI_API_KEY=your_gemini_key
 TAVILY_API_KEY=your_tavily_key
 LLAMA_CLOUD_API_KEY=your_llama_key
-PEXELS_API_KEY=your_pexels_key   # optional
+PEXELS_API_KEY=your_pexels_key   
+```
 
 ## ▶️ How to Run
 ### Step 1: Prepare Input
 Option A — Single File
+```
 examples/
  └── Company-OnePager.md
+```
 
 Option B — Data Pack Folder
+```
 examples/
  └── Company_Data/
      ├── annual_report.pdf
      ├── financials.xlsx
      └── notes.md
+```
 
 ### Step 2: Run the pipeline
+```
 python main.py
+```
 
 ### Step 3: Select input
+```
 --- KELP GENERATOR ---
 Files and Data Pack Folders found:
 [1] [FOLDER] Company_Data
 [2] [FILE]   Company-OnePager.md
+```
 
 Select Item #: 1
 
 ### Step 4: Retrieve Outputs
+```
 Final_Submissions/
  ├── Company_Teaser_Atomic.pptx
  └── Company_Citations.docx
+```
 
 ## ⚙️ Design Decisions & Trade-offs
 - Strict JSON schema was chosen over flexibility to guarantee slide safety.
@@ -318,8 +328,7 @@ Private project / hackathon submission.
 Not intended for public commercial redistribution.
 
 ## 📌 Final Note
-KELP is not a chatbot.
-It is a deterministic analytical system that treats LLMs as controlled extraction engines, not creative writers.
+This is a deterministic analytical system that treats LLMs as controlled extraction engines, not creative writers.
 This design choice is intentional.
 
 
