@@ -1,4 +1,4 @@
-# 🌿 KELP — Automated Deal Flow & Teaser Generation Pipeline
+# Automated Deal Flow & Teaser Generation Pipeline
 
 > **An end-to-end AI pipeline that converts unstructured company data into investment-grade M&A teaser decks.**
 
