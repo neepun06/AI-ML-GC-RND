@@ -77,3 +77,75 @@ class TestWebSnippet:
 def test_parse_source_id_helper():
     assert parse_source_id("doc:a.pdf#p1") == ("doc", "a.pdf#p1")
     assert parse_source_id("web:tavily:https://x.com") == ("web", "tavily:https://x.com")
+
+
+from kelp_teaser.schemas.plan import (
+    Sector,
+    ChartKind,
+    ComponentKind,
+    SectionPlan,
+    SlidePlan,
+    DeckPlan,
+)
+
+
+class TestSector:
+    def test_known_sectors_exist(self):
+        for name in [
+            "Manufacturing",
+            "SpecialtyChemicals",
+            "D2C",
+            "SaaS",
+            "Pharma",
+            "Logistics",
+            "FinancialServices",
+            "Consumer",
+            "Other",
+        ]:
+            assert Sector(name) == getattr(Sector, name)
+
+
+class TestSectionPlan:
+    def test_chart_section_requires_chart_kind(self):
+        with pytest.raises(ValidationError):
+            SectionPlan(kind=ComponentKind.chart, data_hooks=["revenue"])
+
+    def test_image_section_requires_image_brief(self):
+        with pytest.raises(ValidationError):
+            SectionPlan(kind=ComponentKind.hero_image, data_hooks=[])
+
+    def test_metric_section_no_extra_fields_required(self):
+        s = SectionPlan(kind=ComponentKind.metric_tile, data_hooks=["revenue_fy24"])
+        assert s.kind == ComponentKind.metric_tile
+
+
+class TestDeckPlan:
+    def test_deck_must_have_exactly_three_slides(self):
+        with pytest.raises(ValidationError):
+            DeckPlan(
+                codename="Project Halo",
+                slides=[
+                    SlidePlan(title="Slide 1", sections=[
+                        SectionPlan(kind=ComponentKind.bullet_list, data_hooks=["x"])
+                    ])
+                ],
+            )
+
+    def test_deck_codename_required(self):
+        with pytest.raises(ValidationError):
+            DeckPlan(codename="", slides=_three_minimal_slides())
+
+    def test_deck_valid(self):
+        plan = DeckPlan(codename="Project Halo", slides=_three_minimal_slides())
+        assert plan.codename == "Project Halo"
+        assert len(plan.slides) == 3
+
+
+def _three_minimal_slides() -> list[SlidePlan]:
+    return [
+        SlidePlan(
+            title=f"Slide {i + 1}",
+            sections=[SectionPlan(kind=ComponentKind.bullet_list, data_hooks=["x"])],
+        )
+        for i in range(3)
+    ]
