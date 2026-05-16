@@ -11,7 +11,8 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types as genai_types
 from pydantic import BaseModel
 
 from kelp_teaser.config import GEMINI_API_KEY, LLM_MAX_ATTEMPTS
@@ -62,10 +63,16 @@ class CostTracker:
         return sum(self.by_model.values())
 
 
-def _configure_gemini() -> None:
-    if not GEMINI_API_KEY:
-        raise RuntimeError("GEMINI_API_KEY not set; cannot call Gemini")
-    genai.configure(api_key=GEMINI_API_KEY)
+_client: genai.Client | None = None
+
+
+def _get_client() -> genai.Client:
+    global _client
+    if _client is None:
+        if not GEMINI_API_KEY:
+            raise RuntimeError("GEMINI_API_KEY not set; cannot call Gemini")
+        _client = genai.Client(api_key=GEMINI_API_KEY)
+    return _client
 
 
 def complete_text(
@@ -76,15 +83,15 @@ def complete_text(
     tracker: CostTracker | None = None,
 ) -> str:
     """Single text completion with bounded retries. Raises on persistent failure."""
-    _configure_gemini()
     last_exc: Exception | None = None
     for attempt in range(1, LLM_MAX_ATTEMPTS + 1):
         try:
             start = time.monotonic()
-            m = genai.GenerativeModel(model)
-            resp = m.generate_content(
-                prompt,
-                generation_config={"temperature": temperature},
+            client = _get_client()
+            resp = client.models.generate_content(
+                model=model,
+                contents=prompt,
+                config=genai_types.GenerateContentConfig(temperature=temperature),
             )
             elapsed = time.monotonic() - start
             text = resp.text or ""
@@ -114,7 +121,6 @@ def complete_json(
     On parse/validation failure, retries up to LLM_MAX_ATTEMPTS with a reminder appended.
     Raises on persistent failure.
     """
-    _configure_gemini()
     schema_hint = (
         "\n\nRespond ONLY with valid JSON. No markdown fences. "
         "The JSON MUST validate against this schema:\n"
