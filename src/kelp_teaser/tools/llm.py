@@ -16,7 +16,12 @@ from google import genai
 from google.genai import types as genai_types
 from pydantic import BaseModel
 
-from kelp_teaser.config import GEMINI_API_KEY, LLM_MAX_ATTEMPTS
+from kelp_teaser.config import (
+    GEMINI_API_KEY,
+    LLM_MAX_ATTEMPTS,
+    COST_SOFT_WARNING,
+    COST_HARD_ABORT,
+)
 
 log = logging.getLogger(__name__)
 
@@ -68,6 +73,26 @@ class CostTracker:
             return sum(self.by_model.values())
 
 
+class CostExceeded(RuntimeError):
+    pass
+
+
+def check_cost_budget(tracker: CostTracker, *, soft_warning: float,
+                      hard_abort: float) -> None:
+    total = tracker.total_cost_usd
+    if total > hard_abort:
+        raise CostExceeded(
+            f"Run cost ${total:.2f} exceeded hard abort threshold ${hard_abort:.2f}"
+        )
+    if total > soft_warning:
+        log.warning("Run cost $%.2f exceeded soft warning $%.2f",
+                    total, soft_warning)
+
+
+# Module-level shared tracker, set by the CLI for the duration of a run.
+CURRENT_TRACKER: CostTracker | None = None
+
+
 _client: genai.Client | None = None
 
 
@@ -88,6 +113,8 @@ def complete_text(
     tracker: CostTracker | None = None,
 ) -> str:
     """Single text completion with bounded retries. Raises on persistent failure."""
+    if tracker is None:
+        tracker = CURRENT_TRACKER
     last_exc: Exception | None = None
     for attempt in range(1, LLM_MAX_ATTEMPTS + 1):
         try:
@@ -105,6 +132,11 @@ def complete_text(
             output_tokens = getattr(usage, "candidates_token_count", 0) if usage else 0
             if tracker is not None:
                 tracker.record(GeminiCall(model, prompt_tokens, output_tokens, elapsed))
+                check_cost_budget(
+                    tracker,
+                    soft_warning=COST_SOFT_WARNING,
+                    hard_abort=COST_HARD_ABORT,
+                )
             return text
         except Exception as e:  # noqa: BLE001 - Gemini SDK can raise many types
             last_exc = e
@@ -126,6 +158,8 @@ def complete_json(
     On parse/validation failure, retries up to LLM_MAX_ATTEMPTS with a reminder appended.
     Raises on persistent failure.
     """
+    if tracker is None:
+        tracker = CURRENT_TRACKER
     schema_hint = (
         "\n\nRespond ONLY with valid JSON. No markdown fences. "
         "The JSON MUST validate against this schema:\n"

@@ -47,8 +47,17 @@ def run_pipeline(
     )
 
     graph = build_graph(trace_writer=trace, run_dir=run_dir)
-    final_dict = graph.invoke(state)
+
+    import kelp_teaser.tools.llm as llm_module
+    tracker = llm_module.CostTracker()
+    llm_module.CURRENT_TRACKER = tracker
+    try:
+        final_dict = graph.invoke(state)
+    finally:
+        llm_module.CURRENT_TRACKER = None
     final = GraphState.model_validate(final_dict)
+
+    print(f"Run cost: ${tracker.total_cost_usd:.4f} across {tracker.total_calls} calls")
 
     if not final.composed_slides or not final.plan:
         raise RuntimeError("Pipeline produced no composed slides")
