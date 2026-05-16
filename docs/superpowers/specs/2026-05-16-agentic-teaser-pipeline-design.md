@@ -373,3 +373,66 @@ AI-ML-GC-RND/
 - **Removed:** monolithic `analyze.py` prompt, fixed 4-slide layout in `ppt_engine.py`, `main.py` numeric menu, hardcoded paths, root-level outputs, duplicate Gati files.
 - **Kept:** LlamaParse, Tavily, Pexels integrations; python-pptx as renderer; Gemini as runtime LLM; the principle of "code, not templates."
 - **Reshaped:** prompts move to files; slides become dynamic; JSON schemas become Pydantic; outputs become per-run folders; citations become structured with per-claim source_ids.
+
+---
+
+## 11. Deferred to v3 (cost-driven trade-offs revisited)
+
+The capabilities below were on the table during brainstorming but were dropped from v2 purely to keep per-teaser cost in the ~$0.40 range on Gemini API. They are not bad ideas — they are *expensive* ideas. If v3 ever ships (on a cheaper-per-token model in the future, or with a higher cost ceiling), these are the first things to reinstate. Listed roughly in order of likely impact.
+
+### 11.1 Critic on Gemini 2.5 Pro instead of Flash
+
+- **What v2 does:** Critic runs on Flash. Mechanical checks (source_id existence, fuzzy text match, banned-token scan, length discipline, internal consistency) are deterministic and Flash-sufficient.
+- **What v3 would gain:** Pro-quality judgment on the *non-mechanical* checks — sector-fit ("does this section actually suit a specialty chemicals deck?"), anonymization completeness in subtle cases (paraphrased identifiers, distinctive number fingerprints that survive token-level scrubbing), and overall narrative coherence across the 3 slides.
+- **Cost delta:** approximately +$0.10–$0.20 per teaser.
+- **When to revisit:** if review of v2 traces shows the Critic missing qualitative issues that a human reviewer catches.
+
+### 11.2 Bounded Critic revision loop (max 1 revision pass)
+
+- **What v2 does:** Critic emits a report; flow continues unconditionally. Unresolved issues are logged to the trace but never corrected.
+- **What v3 would gain:** for slides flagged with blocking issues, a single revision pass: Composer re-runs for those slides only, with the Critic's specific complaints injected into the prompt. Closes the agentic loop properly and produces visibly higher-quality decks on edge cases.
+- **Cost delta:** approximately +$0.05–$0.15 per teaser on runs where the loop triggers; zero otherwise.
+- **Implementation cost:** non-trivial — requires `revision_count` and `slides_needing_revision` fields back in `GraphState`, a conditional edge after Critic, and Composer prompt support for "revision mode."
+- **When to revisit:** once v2 is stable end-to-end. This is the single biggest "agentic" feature to add back.
+
+### 11.3 Composer on Gemini 2.5 Pro for all slides
+
+- **What v2 does:** Composer already runs on Pro. **Not actually deferred — keeping for clarity.** Skipping.
+
+### 11.4 Multi-loop Critic (up to N=3 revision passes)
+
+- **What v2 does:** No loop at all (see 11.2 for the single-loop version).
+- **What v3 would gain:** highest possible deck quality on hard companies. Critic and Composer iterate until satisfied or N=3.
+- **Risks even at v3:** LLM ping-pong (Critic flags X → Composer fixes X but introduces Y → Critic flags Y), unbounded cost.
+- **Cost delta:** approximately +$0.20–$0.50 per teaser.
+- **When to revisit:** only after the single-pass loop (11.2) is proven well-behaved.
+
+### 11.5 Visible per-claim citation superscripts on slides
+
+- **What v2 does:** Citations live in the Word doc only; slides have no visible markers.
+- **What v3 would gain:** judges/reviewers can trace a claim on the slide directly to its source row in the citations doc, without scanning. Stronger "investment-grade" feel for due-diligence-style use cases.
+- **Cost delta:** zero LLM cost — this is a rendering decision.
+- **Trade-off:** clutter risk on a "teaser" (the spec emphasizes brevity).
+- **When to revisit:** if the system is ever repurposed for a longer-form deck (CIM rather than teaser).
+
+### 11.6 Multi-provider model fallback
+
+- **What v2 does:** Gemini-only at runtime.
+- **What v3 would gain:** if Gemini API is down or rate-limited, fall back to Claude or OpenAI for the affected agent. Improves reliability for any production use.
+- **Cost delta:** zero in steady state; possibly higher on fallback runs.
+- **Implementation cost:** non-trivial — provider abstraction layer, prompt re-templating per provider.
+- **When to revisit:** if the system ever leaves "personal portfolio" territory.
+
+### 11.7 Vector DB / RAG over data packs
+
+- **What v2 does:** passes the full data pack into Gemini Pro's context window directly.
+- **What v3 would gain:** ability to handle company data packs larger than the context window (e.g. full CIMs, multiple years of annual reports). Also enables semantic retrieval — Composer asks "what evidence exists for export %?" instead of getting all evidence at once.
+- **Cost delta:** lower per-call token cost on big inputs; embedding infra to maintain.
+- **When to revisit:** when a real test company has a data pack >500k tokens.
+
+### 11.8 Web UI / dashboard
+
+- **What v2 does:** CLI only.
+- **What v3 would gain:** drag-drop data pack, watch the agent trace stream live, view the generated deck inline, edit prompts without redeploying. Better resume/demo artifact.
+- **Cost delta:** zero LLM cost; significant build cost.
+- **When to revisit:** if the project becomes a portfolio centerpiece rather than a backend pipeline.
