@@ -21,3 +21,22 @@ Thumbs.db
 # Optional: Ignore generated outputs if you only want to track code
 Final_Submissions/
 # *_ANALYSIS.json
+
+# v2 outputs
+data/outputs/
+
+# Python
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+build/
+dist/
+
+# IDE
+.vscode/
+.idea/
+
+# Env
+# .env (already listed above)
