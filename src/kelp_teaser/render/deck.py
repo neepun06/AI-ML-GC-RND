@@ -25,6 +25,12 @@ from kelp_teaser.schemas.slide import ComposedSection, ComposedSlide
 
 def render_deck(*, slides: list[ComposedSlide], codename: str, out_path: Path) -> Path:
     """Render the deck. Returns the saved path."""
+    indices = [s.index for s in slides]
+    assert sorted(indices) == list(range(len(slides))), (
+        f"Slide indices must be contiguous 0..{len(slides) - 1}, "
+        f"got {sorted(indices)}"
+    )
+
     prs = Presentation()
     prs.slide_width = theme.SLIDE_W
     prs.slide_height = theme.SLIDE_H
