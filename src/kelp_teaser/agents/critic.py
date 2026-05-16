@@ -99,7 +99,15 @@ def run(state: GraphState, *, trace_writer: TraceWriter | None = None) -> dict:
         judgmental = llm.complete_json(MODEL_FAST, prompt, CriticReport).issues
     except Exception as e:  # noqa: BLE001
         log.error("Critic LLM judgment failed: %s", e)
-        judgmental = []
+        judgmental = [
+            CriticIssue(
+                slide_index=0,
+                severity=CriticSeverity.warning,
+                category="judgment_unavailable",
+                detail=f"Critic LLM judgment call failed: {e}",
+                suggested_fix="Inspect logs; re-run the Critic step if needed.",
+            )
+        ]
 
     report = CriticReport(issues=deterministic + judgmental)
 
