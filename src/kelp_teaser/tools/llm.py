@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -48,19 +49,23 @@ class GeminiCall:
 class CostTracker:
     calls: list[GeminiCall] = field(default_factory=list)
     by_model: dict[str, float] = field(default_factory=lambda: defaultdict(float))
+    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False, compare=False)
 
     def record(self, call: GeminiCall) -> None:
         cost = estimate_cost_usd(call.model, call.prompt_tokens, call.output_tokens)
-        self.calls.append(call)
-        self.by_model[call.model] += cost
+        with self._lock:
+            self.calls.append(call)
+            self.by_model[call.model] += cost
 
     @property
     def total_calls(self) -> int:
-        return len(self.calls)
+        with self._lock:
+            return len(self.calls)
 
     @property
     def total_cost_usd(self) -> float:
-        return sum(self.by_model.values())
+        with self._lock:
+            return sum(self.by_model.values())
 
 
 _client: genai.Client | None = None
