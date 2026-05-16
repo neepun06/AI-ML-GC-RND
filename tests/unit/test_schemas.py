@@ -149,3 +149,99 @@ def _three_minimal_slides() -> list[SlidePlan]:
         )
         for i in range(3)
     ]
+
+
+from kelp_teaser.schemas.slide import (
+    Bullet,
+    MetricTile,
+    ChartSpec,
+    ChartSeries,
+    ComposedSection,
+    ComposedSlide,
+)
+
+
+class TestComposedSection:
+    def test_section_with_bullets_requires_each_bullet_to_have_source(self):
+        with pytest.raises(ValidationError):
+            ComposedSection(
+                kind="bullet_list",
+                bullets=[Bullet(text="some claim", source_id="")],
+            )
+
+    def test_section_with_metrics_requires_each_metric_to_have_source(self):
+        with pytest.raises(ValidationError):
+            ComposedSection(
+                kind="metric_tile",
+                metrics=[MetricTile(value="₹450 Cr", label="Revenue", source_id="")],
+            )
+
+    def test_valid_bullet_section_round_trips(self):
+        section = ComposedSection(
+            kind="bullet_list",
+            bullets=[
+                Bullet(text="5 facilities across western India", source_id="doc:report.pdf#p4"),
+                Bullet(text="600+ active customers", source_id="web:tavily:https://x.com"),
+            ],
+        )
+        assert len(section.bullets) == 2
+
+
+class TestComposedSlide:
+    def test_composed_slide_minimal(self):
+        slide = ComposedSlide(
+            index=0,
+            title="Business Profile",
+            sections=[
+                ComposedSection(
+                    kind="bullet_list",
+                    bullets=[Bullet(text="A claim", source_id="doc:r.pdf#p1")],
+                )
+            ],
+        )
+        assert slide.index == 0
+
+    def test_composed_slide_collects_all_source_ids(self):
+        slide = ComposedSlide(
+            index=1,
+            title="Financials",
+            sections=[
+                ComposedSection(
+                    kind="metric_tile",
+                    metrics=[
+                        MetricTile(value="₹450 Cr", label="Revenue FY24",
+                                   source_id="doc:r.pdf#p12"),
+                        MetricTile(value="22%", label="EBITDA Margin",
+                                   source_id="doc:r.pdf#p14"),
+                    ],
+                ),
+                ComposedSection(
+                    kind="bullet_list",
+                    bullets=[Bullet(text="X", source_id="web:tavily:https://x.com")],
+                ),
+            ],
+        )
+        ids = slide.all_source_ids()
+        assert ids == {"doc:r.pdf#p12", "doc:r.pdf#p14", "web:tavily:https://x.com"}
+
+
+class TestChartSpec:
+    def test_chart_spec_requires_series(self):
+        with pytest.raises(ValidationError):
+            ChartSpec(
+                chart_kind="revenue_growth_bar",
+                title="Revenue",
+                categories=["FY22", "FY23"],
+                series=[],
+                source_id="doc:r.pdf#p12",
+            )
+
+    def test_chart_spec_valid(self):
+        c = ChartSpec(
+            chart_kind="revenue_growth_bar",
+            title="Revenue",
+            categories=["FY22", "FY23", "FY24"],
+            series=[ChartSeries(name="Revenue (₹ Cr)", values=[300, 380, 450])],
+            source_id="doc:r.pdf#p12",
+        )
+        assert c.series[0].values == [300, 380, 450]
