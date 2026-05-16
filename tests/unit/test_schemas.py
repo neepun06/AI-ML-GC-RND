@@ -245,3 +245,60 @@ class TestChartSpec:
             source_id="doc:r.pdf#p12",
         )
         assert c.series[0].values == [300, 380, 450]
+
+
+from kelp_teaser.schemas.critic import (
+    CriticIssue,
+    CriticReport,
+    CriticSeverity,
+    Substitution,
+)
+from kelp_teaser.schemas.citations import CitationRow, CitationTable
+
+
+class TestCriticReport:
+    def test_critic_issue_severity_enum(self):
+        i = CriticIssue(
+            slide_index=1,
+            severity=CriticSeverity.blocking,
+            category="source_validity",
+            detail="Claim missing source",
+        )
+        assert i.severity == CriticSeverity.blocking
+
+    def test_critic_report_groups_by_slide(self):
+        report = CriticReport(
+            issues=[
+                CriticIssue(slide_index=0, severity=CriticSeverity.warning,
+                            category="length", detail="bullet too long"),
+                CriticIssue(slide_index=2, severity=CriticSeverity.blocking,
+                            category="anonymization", detail="leaked name"),
+            ],
+        )
+        assert report.issues_for_slide(0)[0].category == "length"
+        assert report.has_blocking() is True
+
+
+class TestSubstitution:
+    def test_substitution_minimal(self):
+        s = Substitution(original="Centum Electronics", replacement="Project Halo", slide_index=0)
+        assert s.original == "Centum Electronics"
+
+
+class TestCitationTable:
+    def test_citation_row_minimal(self):
+        row = CitationRow(
+            slide_index=0,
+            claim="Revenue ₹450 Cr",
+            source_id="doc:r.pdf#p12",
+            verbatim_quote="Total revenue stood at ₹450 crore",
+            confidence="High",
+        )
+        assert row.slide_index == 0
+
+    def test_citation_table_roundtrip(self):
+        t = CitationTable(rows=[
+            CitationRow(slide_index=0, claim="X", source_id="doc:r.pdf#p1",
+                        verbatim_quote="X", confidence="High"),
+        ])
+        assert len(t.rows) == 1
