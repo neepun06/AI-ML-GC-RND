@@ -73,6 +73,7 @@ def run_pipeline(
     if final.citation_table is not None:
         render_citations_doc(final.citation_table, citations_path)
 
+    trace.add_cost(tracker.total_cost_usd)
     trace_path = trace.finalize()
 
     print(f"Wrote {pptx_path}")
