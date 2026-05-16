@@ -67,3 +67,27 @@ def test_researcher_summarizes_each_hit_with_flash(monkeypatch):
     snippet = result["web_snippets"][0]
     assert snippet.source_id == "web:tavily:https://acme.com/products"
     assert "600+ customers" in snippet.summary
+
+
+def test_researcher_warns_and_traces_when_no_tavily_hits(monkeypatch, caplog):
+    """When every Tavily query yields zero hits, log a warning AND record
+    a 'web_research_empty' flag in the trace step."""
+    import logging
+    from kelp_teaser.graph.trace import TraceWriter
+
+    monkeypatch.setattr(
+        "kelp_teaser.agents.researcher.web_search.search",
+        lambda query, max_results=5: [],
+    )
+    patch_llm(monkeypatch)
+
+    state = _state()
+    writer = TraceWriter(run_dir=None)
+    caplog.set_level(logging.WARNING, logger="kelp_teaser.agents.researcher")
+    result = run_researcher(state, trace_writer=writer)
+
+    assert result["web_snippets"] == []
+    assert any("no tavily hits" in rec.message.lower()
+               for rec in caplog.records)
+    assert len(writer.steps) == 1
+    assert writer.steps[0]["data"].get("web_research_empty") is True
