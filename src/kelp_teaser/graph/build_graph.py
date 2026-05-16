@@ -119,7 +119,7 @@ def _composer_node_factory(trace_writer: TraceWriter | None,
         slide_plan = state_obj.plan.slides[idx]
         out_dir = (_run_dir / "intermediate") if _run_dir is not None \
             else (Path("data/outputs") / state_obj.run_id / "intermediate")
-        composed = composer_agent.compose_slide(
+        composed, warnings = composer_agent.compose_slide(
             slide_index=idx,
             slide_plan=slide_plan,
             codename=state_obj.plan.codename,
@@ -129,7 +129,11 @@ def _composer_node_factory(trace_writer: TraceWriter | None,
             out_dir=out_dir,
         )
         if _trace is not None:
-            _trace.write_step(f"composer_{idx}", composed.model_dump())
+            _trace.write_step(f"composer_{idx}", {
+                **composed.model_dump(),
+                "warnings": warnings,
+                "warning_count": len(warnings),
+            })
         return {"composed_slides": {idx: composed}}
 
     return composer_one

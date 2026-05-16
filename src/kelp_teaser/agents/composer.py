@@ -38,7 +38,13 @@ def compose_slide(
     web_snippets: list[WebSnippet],
     sector: str,
     out_dir: Path,
-) -> ComposedSlide:
+) -> tuple[ComposedSlide, list[str]]:
+    """Compose one slide. Returns (composed_slide, warnings).
+
+    Warnings is a list of human-readable strings describing sub-call
+    failures (e.g. "chart_missing: ChartDesigner failed for slide 0:
+    <reason>"). Empty list on a clean run.
+    """
     source_context = build_source_context(docs, web_snippets)
     section_plans_json = json.dumps(
         [s.model_dump(mode="json") for s in slide_plan.sections],
@@ -53,11 +59,11 @@ def compose_slide(
     )
     composed: ComposedSlide = llm.complete_json(MODEL_SMART, prompt, ComposedSlide)
 
-    composed = _attach_charts_and_images(
+    composed, warnings = _attach_charts_and_images(
         composed=composed, slide_plan=slide_plan,
         source_context=source_context, sector=sector, out_dir=out_dir,
     )
-    return composed
+    return composed, warnings
 
 
 def _attach_charts_and_images(
@@ -67,9 +73,13 @@ def _attach_charts_and_images(
     source_context: str,
     sector: str,
     out_dir: Path,
-) -> ComposedSlide:
-    """Pair each ComposedSection with its SectionPlan and run the side agents."""
+) -> tuple[ComposedSlide, list[str]]:
+    """Pair each ComposedSection with its SectionPlan and run the side agents.
+
+    Returns (updated_composed, warnings).
+    """
     new_sections: list[ComposedSection] = []
+    warnings: list[str] = []
     paired = list(zip(slide_plan.sections, composed.sections))
     for plan_sec, composed_sec in paired:
         if plan_sec.kind == ComponentKind.chart and composed_sec.chart is None:
@@ -79,8 +89,10 @@ def _attach_charts_and_images(
                 )
                 composed_sec = composed_sec.model_copy(update={"chart": chart})
             except Exception as e:  # noqa: BLE001
-                log.error("ChartDesigner failed for slide %s: %s",
-                          composed.index, e)
+                msg = (f"chart_missing: ChartDesigner failed for slide "
+                       f"{composed.index}: {e}")
+                log.error(msg)
+                warnings.append(msg)
         elif plan_sec.kind == ComponentKind.hero_image and composed_sec.image is None:
             try:
                 img = image_curator.curate_image(
@@ -89,8 +101,15 @@ def _attach_charts_and_images(
                 )
                 if img is not None:
                     composed_sec = composed_sec.model_copy(update={"image": img})
+                else:
+                    msg = (f"image_missing: ImageCurator returned None for "
+                           f"slide {composed.index}")
+                    log.warning(msg)
+                    warnings.append(msg)
             except Exception as e:  # noqa: BLE001
-                log.error("ImageCurator failed for slide %s: %s",
-                          composed.index, e)
+                msg = (f"image_missing: ImageCurator failed for slide "
+                       f"{composed.index}: {e}")
+                log.error(msg)
+                warnings.append(msg)
         new_sections.append(composed_sec)
-    return composed.model_copy(update={"sections": new_sections})
+    return composed.model_copy(update={"sections": new_sections}), warnings
