@@ -32,7 +32,13 @@ def render_chart(slide, x: Emu, y: Emu, w: Emu, h: Emu, spec: ChartSpec) -> None
     for series in spec.series:
         data.add_series(series.name, series.values)
 
-    chart = slide.shapes.add_chart(xl_kind, x, y, w, h, data).chart
+    # python-pptx serialises chart graphicFrame x/y/cx/cy with str(value), so a
+    # float EMU like 4389120.0 lands in the XML as "4389120.0". PowerPoint then
+    # refuses to parse the graphicFrame and strips the chart on repair. Force
+    # ints here so callers can do EMU arithmetic with `/` without breaking us.
+    chart = slide.shapes.add_chart(
+        xl_kind, int(x), int(y), int(w), int(h), data,
+    ).chart
     chart.has_title = bool(spec.title)
     if spec.title:
         chart.chart_title.text_frame.text = spec.title
