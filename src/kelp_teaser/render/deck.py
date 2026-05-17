@@ -85,8 +85,17 @@ def _render_section(slide, section: ComposedSection, *, x, y, w, h) -> None:
                      section.chart)
 
     elif section.kind == ComponentKind.hero_image and section.image is not None:
-        # Minimal v2 image rendering: insert the local file at full section size.
-        slide.shapes.add_picture(section.image.path, x, y, width=w, height=h)
+        # If the image file actually exists on disk, render it. Otherwise
+        # (Composer hallucinated a path, or ImageCurator was skipped because
+        # PEXELS_API_KEY is not set) fail soft to a labelled placeholder so
+        # the deck still renders.
+        image_path = Path(section.image.path)
+        if image_path.is_file():
+            slide.shapes.add_picture(str(image_path), x, y, width=w, height=h)
+        else:
+            placeholder_title = (section.heading or section.image.alt_text
+                                 or "Image unavailable")
+            draw_container(slide, x, y, w, h, title=placeholder_title)
 
     elif section.kind == ComponentKind.product_grid:
         draw_container(slide, x, y, w, h, title=section.heading or "Portfolio")

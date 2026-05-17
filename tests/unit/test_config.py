@@ -14,7 +14,9 @@ def test_default_paths_are_under_repo_root():
 
 def test_model_ids_are_defined():
     assert config.MODEL_FAST == "gemini-2.5-flash"
-    assert config.MODEL_SMART == "gemini-2.5-pro"
+    # MODEL_SMART defaults to gemini-2.5-pro but can be overridden via the
+    # KELP_MODEL_SMART env var (e.g. for free-tier smoke runs on Flash).
+    assert config.MODEL_SMART in ("gemini-2.5-pro", "gemini-2.5-flash")
 
 
 def test_cost_guardrails_are_sane():
