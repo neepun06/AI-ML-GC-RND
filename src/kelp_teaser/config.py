@@ -33,3 +33,9 @@ LLM_MAX_ATTEMPTS = 2
 
 # Parallel composer fan-out cap
 MAX_PARALLEL_SLIDES = 3
+
+# Web search budget per Tavily query. Each hit triggers a Flash summarize
+# call, so 3 queries × N hits = up to 3N extra Flash calls per run. Default
+# is 1 so a fully-integrated run fits comfortably in free-tier Flash quota.
+# Bump up to 3 on paid tier for richer Planner briefs.
+WEB_SEARCH_MAX_RESULTS = int(os.getenv("KELP_WEB_SEARCH_MAX_RESULTS", "1"))

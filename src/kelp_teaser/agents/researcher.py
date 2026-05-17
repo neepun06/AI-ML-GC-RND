@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 
-from kelp_teaser.config import MODEL_FAST
+from kelp_teaser.config import MODEL_FAST, WEB_SEARCH_MAX_RESULTS
 from kelp_teaser.graph.state import GraphState
 from kelp_teaser.graph.trace import TraceWriter
 from kelp_teaser.schemas.facts import IngestedDoc, WebSnippet
@@ -44,7 +44,7 @@ def build_planner_brief(docs: list[IngestedDoc], snippets: list[WebSnippet]) -> 
 def run(state: GraphState, *, trace_writer: TraceWriter | None = None) -> dict:
     snippets: list[WebSnippet] = []
     for query in default_queries(state.company_name):
-        hits = web_search.search(query, max_results=3)
+        hits = web_search.search(query, max_results=WEB_SEARCH_MAX_RESULTS)
         for hit in hits:
             if not hit.url or not hit.content:
                 continue
