@@ -18,9 +18,11 @@ TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 LLAMA_CLOUD_API_KEY = os.getenv("LLAMA_CLOUD_API_KEY")
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
 
-# Model IDs
+# Model IDs. MODEL_SMART can be overridden via KELP_MODEL_SMART env var
+# (e.g. to point Planner/Composer at Flash for free-tier smoke runs, since
+# gemini-2.5-pro has zero free-tier quota as of 2026).
 MODEL_FAST = "gemini-2.5-flash"
-MODEL_SMART = "gemini-2.5-pro"
+MODEL_SMART = os.getenv("KELP_MODEL_SMART", "gemini-2.5-pro")
 
 # Cost guardrails (USD)
 COST_SOFT_WARNING = 2.00
