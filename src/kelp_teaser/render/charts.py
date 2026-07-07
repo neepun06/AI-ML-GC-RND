@@ -43,6 +43,14 @@ def render_chart(slide, x: Emu, y: Emu, w: Emu, h: Emu, spec: ChartSpec) -> None
     if spec.title:
         chart.chart_title.text_frame.text = spec.title
 
+    # Value data labels on bar/line charts (donuts get legend instead).
+    if spec.chart_kind not in (ChartKind.segment_mix_donut,
+                               ChartKind.channel_mix_donut):
+        plot = chart.plots[0]
+        plot.has_data_labels = True
+        plot.data_labels.number_format = "General"
+        plot.data_labels.number_format_is_linked = False
+
     if spec.chart_kind in (ChartKind.segment_mix_donut, ChartKind.channel_mix_donut):
         chart.has_legend = True
         chart.legend.position = XL_LEGEND_POSITION.RIGHT

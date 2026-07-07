@@ -83,3 +83,26 @@ def test_render_chart_coerces_float_emu_to_int():
         f"Found non-integer EMU coords in slide XML: {bad}. "
         "PowerPoint will refuse to load this and strip the chart on repair."
     )
+
+
+def test_bar_chart_has_data_labels(tmp_path):
+    """Column/line charts must show value data labels so numbers are
+    readable without reading the axis."""
+    from pptx import Presentation
+    from pptx.util import Inches
+    from kelp_teaser.render.charts import render_chart
+    from kelp_teaser.schemas.slide import ChartSpec, ChartSeries
+    from kelp_teaser.schemas.plan import ChartKind
+
+    prs = Presentation()
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    spec = ChartSpec(
+        chart_kind=ChartKind.revenue_growth_bar, title="Rev",
+        categories=["FY23", "FY24"],
+        series=[ChartSeries(name="Revenue", values=[10.0, 20.0])],
+        source_id="doc:x.md",
+    )
+    render_chart(slide, Inches(1), Inches(1), Inches(5), Inches(3), spec)
+    chart = next(sh.chart for sh in slide.shapes if sh.has_chart)
+    plot = chart.plots[0]
+    assert plot.has_data_labels is True
