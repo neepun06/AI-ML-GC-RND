@@ -28,8 +28,10 @@ MODEL_SMART = os.getenv("KELP_MODEL_SMART", "gemini-2.5-pro")
 COST_SOFT_WARNING = 2.00
 COST_HARD_ABORT = 5.00
 
-# Retry policy
-LLM_MAX_ATTEMPTS = 2
+# Retry policy. Retries feed the specific validation errors back to the model
+# (see tools/llm.complete_json), so a third attempt meaningfully improves
+# recovery from transient schema violations.
+LLM_MAX_ATTEMPTS = 3
 
 # Parallel composer fan-out cap
 MAX_PARALLEL_SLIDES = 3
