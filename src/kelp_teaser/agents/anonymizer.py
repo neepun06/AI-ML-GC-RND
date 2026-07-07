@@ -32,6 +32,7 @@ class _Replacement(BaseModel):
 def run(state: GraphState, *, trace_writer: TraceWriter | None = None) -> dict:
     real_name = state.company_name
     codename = state.plan.codename if state.plan else "Project Blind"
+    identifier_terms = state.identifier_terms
     log_entries: list[Substitution] = []
     new_slides: dict[int, ComposedSlide] = {}
 
@@ -40,11 +41,11 @@ def run(state: GraphState, *, trace_writer: TraceWriter | None = None) -> dict:
         for section in slide.sections:
             new_section = section.model_copy(deep=True)
             new_section.bullets = [
-                _scrub_bullet(b, real_name, codename, idx, log_entries)
+                _scrub_bullet(b, real_name, codename, idx, log_entries, identifier_terms)
                 for b in section.bullets
             ]
             new_section.metrics = [
-                _scrub_metric(m, real_name, codename, idx, log_entries)
+                _scrub_metric(m, real_name, codename, idx, log_entries, identifier_terms)
                 for m in section.metrics
             ]
             new_sections.append(new_section)
@@ -59,8 +60,12 @@ def run(state: GraphState, *, trace_writer: TraceWriter | None = None) -> dict:
     return {"composed_slides": new_slides, "anonymization_log": log_entries}
 
 
-def _scrub_text(text: str, real_name: str, codename: str) -> str:
-    if real_name.lower() not in text.lower():
+def _scrub_text(text: str, real_name: str, codename: str,
+                identifier_terms: list[str] | None = None) -> str:
+    terms = identifier_terms or []
+    lower = text.lower()
+    triggers = [real_name] + terms
+    if not any(t and t.lower() in lower for t in triggers):
         return text
     prompt = load_prompt("anonymizer").render(
         real_name=real_name, codename=codename, original_text=text,
@@ -92,8 +97,9 @@ def _literal_swap(text: str, real_name: str, codename: str) -> str:
 
 
 def _scrub_bullet(b: Bullet, real_name: str, codename: str,
-                  slide_idx: int, log_entries: list[Substitution]) -> Bullet:
-    new_text = _scrub_text(b.text, real_name, codename)
+                  slide_idx: int, log_entries: list[Substitution],
+                  identifier_terms: list[str]) -> Bullet:
+    new_text = _scrub_text(b.text, real_name, codename, identifier_terms)
     if new_text != b.text:
         log_entries.append(Substitution(original=b.text, replacement=new_text,
                                         slide_index=slide_idx,
@@ -103,9 +109,10 @@ def _scrub_bullet(b: Bullet, real_name: str, codename: str,
 
 
 def _scrub_metric(m: MetricTile, real_name: str, codename: str,
-                  slide_idx: int, log_entries: list[Substitution]) -> MetricTile:
-    new_label = _scrub_text(m.label, real_name, codename)
-    new_subtext = _scrub_text(m.subtext, real_name, codename) if m.subtext else ""
+                  slide_idx: int, log_entries: list[Substitution],
+                  identifier_terms: list[str]) -> MetricTile:
+    new_label = _scrub_text(m.label, real_name, codename, identifier_terms)
+    new_subtext = _scrub_text(m.subtext, real_name, codename, identifier_terms) if m.subtext else ""
     if new_label != m.label or new_subtext != m.subtext:
         log_entries.append(Substitution(
             original=f"{m.label} | {m.subtext}",

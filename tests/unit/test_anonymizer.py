@@ -63,3 +63,31 @@ def test_anonymizer_skips_clean_text_without_llm_call(monkeypatch):
     # No substitutions recorded; slide unchanged
     assert result["anonymization_log"] == []
     assert result["composed_slides"][0].sections[0].metrics[0].value == "₹450 Cr"
+
+
+def test_anonymizer_scrubs_identifier_terms_not_containing_company_name(monkeypatch):
+    """A bullet that names a distinctive award (but not the company name)
+    must still be sent to the scrubber when the award is an identifier term."""
+    import kelp_teaser.agents.anonymizer as anonymizer_mod
+
+    seen: list[str] = []
+
+    def fake_complete_json(model, prompt, schema, **kw):
+        seen.append(prompt)
+        return schema(replacement="Won a leading industry growth award.")
+
+    monkeypatch.setattr(anonymizer_mod.llm, "complete_json", fake_complete_json)
+
+    slide = ComposedSlide(index=0, title="t", sections=[
+        ComposedSection(kind=ComponentKind.bullet_list, bullets=[
+            Bullet(text="Won NASSCOM Impact Award 2025 for Growth.",
+                   source_id="doc:x.md"),
+        ]),
+    ])
+    state = _state_with_slides([slide])
+    state = state.model_copy(update={"identifier_terms": ["NASSCOM Impact Award"]})
+
+    result = run_anonymizer(state)
+    out_slide = result["composed_slides"][0]
+    assert "NASSCOM" not in out_slide.sections[0].bullets[0].text
+    assert len(seen) == 1  # scrubber WAS called despite no company name

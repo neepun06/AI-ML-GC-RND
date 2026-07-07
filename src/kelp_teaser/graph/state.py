@@ -36,6 +36,11 @@ class GraphState(BaseModel):
 
     # Filled by Anonymizer
     anonymization_log: list[Substitution] = Field(default_factory=list)
+    identifier_terms: list[str] = Field(
+        default_factory=list,
+        description="Distinctive tokens (award names, product names) that "
+        "unblind the company and must be generalized by the Anonymizer.",
+    )
 
     # Filled by Critic
     critic_report: CriticReport | None = None
