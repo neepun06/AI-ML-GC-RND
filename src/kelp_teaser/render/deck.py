@@ -66,16 +66,48 @@ def _render_slide(prs, composed: ComposedSlide, codename: str) -> None:
     add_footer(slide)
 
     content_h = theme.SLIDE_H - theme.HEADER_HEIGHT - Inches(0.6)
-    weights = [_ROW_WEIGHTS.get(s.kind, 2) for s in composed.sections]
-    total_weight = sum(weights) or 1
-    y_cursor = theme.HEADER_HEIGHT + Inches(0.2)
 
-    for section, weight in zip(composed.sections, weights):
-        row_h = content_h * weight / total_weight
-        _render_section(slide, section,
-                        x=theme.MARGIN, y=y_cursor,
-                        w=theme.CONTENT_W, h=row_h - Inches(0.1))
+    # Build render units: a [chart, bullet_list] adjacent pair is ONE unit
+    # (rendered side-by-side) weighted by the chart; everything else is its
+    # own unit weighted by its kind.
+    secs = composed.sections
+    render_weights: list[int] = []
+    j = 0
+    while j < len(secs):
+        if (secs[j].kind == ComponentKind.chart
+                and j + 1 < len(secs)
+                and secs[j + 1].kind == ComponentKind.bullet_list):
+            render_weights.append(_ROW_WEIGHTS[ComponentKind.chart])
+            j += 2
+        else:
+            render_weights.append(_ROW_WEIGHTS.get(secs[j].kind, 2))
+            j += 1
+    total_weight = sum(render_weights) or 1
+
+    y_cursor = theme.HEADER_HEIGHT + Inches(0.2)
+    unit_idx = 0
+    i = 0
+    while i < len(secs):
+        sec = secs[i]
+        nxt = secs[i + 1] if i + 1 < len(secs) else None
+        row_h = content_h * render_weights[unit_idx] / total_weight
+        # Composite: chart + adjacent bullet_list -> side-by-side band.
+        if (sec.kind == ComponentKind.chart
+                and nxt is not None
+                and nxt.kind == ComponentKind.bullet_list):
+            half_w = (theme.CONTENT_W - theme.GUTTER) / 2
+            _render_section(slide, sec, x=theme.MARGIN, y=y_cursor,
+                            w=half_w, h=row_h - Inches(0.1))
+            _render_section(slide, nxt,
+                            x=theme.MARGIN + half_w + theme.GUTTER, y=y_cursor,
+                            w=half_w, h=row_h - Inches(0.1))
+            i += 2
+        else:
+            _render_section(slide, sec, x=theme.MARGIN, y=y_cursor,
+                            w=theme.CONTENT_W, h=row_h - Inches(0.1))
+            i += 1
         y_cursor += row_h
+        unit_idx += 1
 
 
 def _render_section(slide, section: ComposedSection, *, x, y, w, h) -> None:

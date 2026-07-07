@@ -121,3 +121,29 @@ def test_chart_row_is_taller_than_kpi_row(tmp_path):
     chart_h = next(sh.height for sh in slide.shapes if sh.has_chart)
     # The chart must have real vertical room — at least 1.8 inches.
     assert chart_h >= Inches(1.8), f"chart too short: {chart_h} EMU"
+
+
+def test_chart_then_bullets_render_side_by_side(tmp_path):
+    """When a chart section is immediately followed by a bullet_list, they
+    render in the same horizontal band (chart on left half, bullets on
+    right half) rather than stacked full width."""
+    from pptx import Presentation
+    from kelp_teaser.render import theme
+    from kelp_teaser.schemas.slide import ChartSpec, ChartSeries
+    from kelp_teaser.schemas.plan import ChartKind
+    chart = ChartSpec(chart_kind=ChartKind.revenue_growth_bar, title="Rev",
+                      categories=["FY24", "FY25"],
+                      series=[ChartSeries(name="R", values=[1.0, 2.0])],
+                      source_id="doc:x.md")
+    slide = ComposedSlide(index=0, title="Fin", sections=[
+        ComposedSection(kind=ComponentKind.chart, heading="Rev", chart=chart),
+        ComposedSection(kind=ComponentKind.bullet_list, bullets=[
+            Bullet(text="commentary", source_id="doc:x.md")]),
+    ])
+    out = render_deck(slides=[slide], codename="Project X",
+                      out_path=tmp_path / "d.pptx")
+    prs = Presentation(str(out))
+    s = prs.slides[0]
+    chart_shape = next(sh for sh in s.shapes if sh.has_chart)
+    # Chart occupies roughly the left half, not the full content width.
+    assert chart_shape.width < theme.CONTENT_W * 0.65
