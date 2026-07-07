@@ -78,3 +78,32 @@ def test_critic_merges_llm_and_deterministic(monkeypatch):
     patch_llm(monkeypatch, json_responses=[CriticReport(issues=[])])
     result = run_critic(state)
     assert result["critic_report"].issues == []
+
+
+def test_critic_appends_judgment_unavailable_when_llm_raises(monkeypatch):
+    """When the Flash judgment call fails, the report must contain a
+    synthetic 'judgment_unavailable' warning rather than silently returning
+    only deterministic issues (which read as 'all clear')."""
+    import kelp_teaser.tools.llm as llm_module
+
+    def boom(model, prompt, schema, *, temperature=0.2, tracker=None):
+        raise RuntimeError("simulated Gemini timeout")
+
+    monkeypatch.setattr(llm_module, "complete_json", boom)
+
+    slide = ComposedSlide(index=0, title="t", sections=[
+        ComposedSection(kind=ComponentKind.bullet_list, bullets=[
+            Bullet(text="clean", source_id="doc:x.md"),
+        ]),
+    ])
+    state = _state([slide, slide.model_copy(update={"index": 1}),
+                    slide.model_copy(update={"index": 2})])
+
+    result = run_critic(state)
+    report = result["critic_report"]
+    judgment_issues = [i for i in report.issues
+                       if i.category == "judgment_unavailable"]
+    assert len(judgment_issues) == 1
+    assert judgment_issues[0].severity.value == "warning"
+    assert "simulated Gemini timeout" in judgment_issues[0].detail
+    assert report.has_blocking() is False

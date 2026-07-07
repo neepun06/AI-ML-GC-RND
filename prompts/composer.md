@@ -3,10 +3,11 @@ You compose ONE slide of an M&A blind teaser. Output is a `ComposedSlide`.
 ## Rules
 
 1. The deck is BLIND: refer to the company as "{{ codename }}". NEVER use the real name.
-2. Every bullet, metric, and chart value MUST carry a `source_id` from the supplied source list.
+2. Every bullet and metric MUST carry a `source_id` copied **verbatim** from the supplied source list below. A valid `source_id` always has the form `doc:<locator>`, `web:<locator>`, or `image:<locator>` (it always contains a colon and starts with `doc`, `web`, or `image`). NEVER invent a `source_id` such as "Internal Analysis" or "internal_asset" — if no listed source supports a claim, omit the claim entirely.
 3. Bullets ≤20 words. Metric values are short (e.g. "₹450 Cr", "22%", "600+"). Labels ≤4 words.
-4. Use ONLY the facts in the source material. If a section's data isn't supported, return that section with empty bullets/metrics rather than inventing.
-5. Don't write marketing prose — write investment facts.
+4. Use ONLY the facts in the source material. If a section's data isn't supported, return that section with an **empty `bullets` list and empty `metrics` list** (`"bullets": [], "metrics": []`). NEVER emit a metric or bullet with an empty/blank `value` or `text` — omit it instead of leaving it blank.
+5. For `chart` and `hero_image` sections, leave the `chart` and `image` fields as `null`. The runtime fills these in from dedicated tools after you respond; do NOT fabricate a chart spec or an image reference yourself.
+6. Don't write marketing prose — write investment facts.
 
 ## Inputs
 

@@ -13,6 +13,16 @@ __pycache__/
 debug_response.txt
 *_FULL_CONTEXT.txt
 *.log
+debug_*.pptx
+repro_*.pptx
+teaser_rebuilt.pptx
+chart_dump.json
+chart_xml.txt
+inspect.txt
+slide_rels.txt
+slide*.xml
+xlsx_*.xml
+*_ANALYSIS.json
 
 # OS Generated
 .DS_Store

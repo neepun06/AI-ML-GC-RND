@@ -179,7 +179,9 @@ def complete_json(
                         attempt, LLM_MAX_ATTEMPTS, e)
             augmented = (
                 prompt + schema_hint
-                + "\n\nPrevious attempt failed validation; respond with strictly valid JSON."
+                + "\n\nYour previous response failed validation with these errors:\n"
+                + f"{e}\n\n"
+                + "Fix ONLY these specific issues and respond with strictly valid JSON."
             )
     raise RuntimeError(f"complete_json failed after {LLM_MAX_ATTEMPTS} attempts") from last_exc
 

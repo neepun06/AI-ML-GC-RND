@@ -50,3 +50,36 @@ def test_render_unknown_chart_kind_raises():
     with pytest.raises(ValueError):
         render_chart(slide, Inches(1), Inches(2), Inches(5), Inches(4),
                      spec=None)  # type: ignore[arg-type]
+
+
+def test_render_chart_coerces_float_emu_to_int():
+    """python-pptx serialises chart graphicFrame coordinates with str(value),
+    so a float EMU like 4389120.0 would land in slide XML as "4389120.0" and
+    cause PowerPoint to strip the chart on repair. render_chart must coerce
+    to int so callers using `/` (which produces floats) stay safe."""
+    import re
+    import zipfile
+
+    prs, slide = _blank_slide()
+    spec = ChartSpec(
+        chart_kind="revenue_growth_line",
+        title="Revenue",
+        categories=["2020", "2021", "2022"],
+        series=[ChartSeries(name="Revenue", values=[100, 200, 300])],
+        source_id="doc:x.md",
+    )
+    # Float EMU values (what deck.py's row_h math produces).
+    render_chart(slide, x=914400.0, y=4389120.0,
+                 w=10911535.0, h=1920240.0, spec=spec)
+
+    import io
+    buf = io.BytesIO()
+    prs.save(buf)
+    with zipfile.ZipFile(io.BytesIO(buf.getvalue())) as zf:
+        slide_xml = zf.read("ppt/slides/slide1.xml").decode("utf-8")
+    # No graphicFrame attribute should look like "4389120.0".
+    bad = re.findall(r'(x|y|cx|cy)="[0-9]+\.[0-9]+"', slide_xml)
+    assert bad == [], (
+        f"Found non-integer EMU coords in slide XML: {bad}. "
+        "PowerPoint will refuse to load this and strip the chart on repair."
+    )

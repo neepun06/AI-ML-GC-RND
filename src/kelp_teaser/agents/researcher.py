@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 
-from kelp_teaser.config import MODEL_FAST
+from kelp_teaser.config import MODEL_FAST, WEB_SEARCH_MAX_RESULTS
 from kelp_teaser.graph.state import GraphState
 from kelp_teaser.graph.trace import TraceWriter
 from kelp_teaser.schemas.facts import IngestedDoc, WebSnippet
@@ -44,7 +44,7 @@ def build_planner_brief(docs: list[IngestedDoc], snippets: list[WebSnippet]) -> 
 def run(state: GraphState, *, trace_writer: TraceWriter | None = None) -> dict:
     snippets: list[WebSnippet] = []
     for query in default_queries(state.company_name):
-        hits = web_search.search(query, max_results=3)
+        hits = web_search.search(query, max_results=WEB_SEARCH_MAX_RESULTS)
         for hit in hits:
             if not hit.url or not hit.content:
                 continue
@@ -58,10 +58,19 @@ def run(state: GraphState, *, trace_writer: TraceWriter | None = None) -> dict:
 
     brief = build_planner_brief(state.docs, snippets)
 
+    web_research_empty = len(snippets) == 0
+    if web_research_empty:
+        log.warning(
+            "Researcher: no Tavily hits across any query for %r; "
+            "Planner brief will be doc-only.",
+            state.company_name,
+        )
+
     if trace_writer is not None:
         trace_writer.write_step("researcher", {
             "snippet_count": len(snippets),
             "brief_chars": len(brief),
+            "web_research_empty": web_research_empty,
         })
 
     return {"web_snippets": snippets, "planner_brief": brief}
