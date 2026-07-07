@@ -23,6 +23,19 @@ from kelp_teaser.schemas.plan import ComponentKind
 from kelp_teaser.schemas.slide import ComposedSection, ComposedSlide
 
 
+# Height weight per section kind. Charts/images/quadrants need real vertical
+# room; metric/kpi strips are short. Bullets are medium.
+_ROW_WEIGHTS: dict[ComponentKind, int] = {
+    ComponentKind.chart: 3,
+    ComponentKind.hero_image: 3,
+    ComponentKind.quadrant: 3,
+    ComponentKind.bullet_list: 2,
+    ComponentKind.product_grid: 2,
+    ComponentKind.metric_tile: 1,
+    ComponentKind.kpi_strip: 1,
+}
+
+
 def render_deck(*, slides: list[ComposedSlide], codename: str, out_path: Path) -> Path:
     """Render the deck. Returns the saved path."""
     indices = [s.index for s in slides]
@@ -51,12 +64,13 @@ def _render_slide(prs, composed: ComposedSlide, codename: str) -> None:
     add_header(slide, codename=codename, subtitle=composed.title)
     add_footer(slide)
 
-    # Below the header, place sections top-to-bottom in equal rows.
-    n = len(composed.sections)
-    row_h = (theme.SLIDE_H - theme.HEADER_HEIGHT - Inches(0.6)) / max(n, 1)
+    content_h = theme.SLIDE_H - theme.HEADER_HEIGHT - Inches(0.6)
+    weights = [_ROW_WEIGHTS.get(s.kind, 2) for s in composed.sections]
+    total_weight = sum(weights) or 1
     y_cursor = theme.HEADER_HEIGHT + Inches(0.2)
 
-    for section in composed.sections:
+    for section, weight in zip(composed.sections, weights):
+        row_h = content_h * weight / total_weight
         _render_section(slide, section,
                         x=theme.MARGIN, y=y_cursor,
                         w=theme.CONTENT_W, h=row_h - Inches(0.1))
