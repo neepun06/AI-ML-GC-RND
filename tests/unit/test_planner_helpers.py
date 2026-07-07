@@ -56,3 +56,14 @@ def test_planner_renders_prompt_with_sector(monkeypatch):
     run_planner(_state())
     assert "SaaS" in captured["prompt"]
     assert "DevOps" in captured["prompt"]
+
+
+def test_planner_surfaces_identifier_terms(monkeypatch):
+    """The planner node must copy DeckPlan.identifier_terms onto the
+    returned state dict so the Anonymizer can consume them."""
+    plan = _valid_plan().model_copy(update={
+        "identifier_terms": ["Dashboard Ninja", "NASSCOM Impact Award"],
+    })
+    patch_llm(monkeypatch, json_responses=[plan])
+    result = run_planner(_state())
+    assert result["identifier_terms"] == ["Dashboard Ninja", "NASSCOM Impact Award"]

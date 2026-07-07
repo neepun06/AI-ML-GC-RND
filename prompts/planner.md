@@ -15,6 +15,9 @@ You are the Deck Planner for a Kelp M&A blind teaser.
    - Pharma → product_grid (portfolio), metric_tile (certifications), bullet_list (R&D pipeline).
    - Logistics → metric_tile (fleet/coverage), chart (volume), bullet_list (network).
 8. Slide order: Slide 1 = business overview; Slide 2 = financial/operational scale; Slide 3 = investment thesis.
+9. Populate `identifier_terms` with the distinctive proper nouns you saw that
+   would unblind the company: award names, product/brand names, trademarks,
+   and unique certifications. These are generalized later by the Anonymizer.
 
 ## Inputs
 

@@ -69,3 +69,8 @@ class SlidePlan(BaseModel):
 class DeckPlan(BaseModel):
     codename: str = Field(min_length=1)
     slides: list[SlidePlan] = Field(min_length=3, max_length=3)
+    identifier_terms: list[str] = Field(
+        default_factory=list,
+        description="Distinctive names that would unblind the company "
+        "(awards, product/brand names, trademarks) for the Anonymizer.",
+    )

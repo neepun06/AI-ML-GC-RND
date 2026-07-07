@@ -25,4 +25,4 @@ def run(state: GraphState, *, trace_writer: TraceWriter | None = None) -> dict:
     if trace_writer is not None:
         trace_writer.write_step("planner", plan.model_dump())
 
-    return {"plan": plan}
+    return {"plan": plan, "identifier_terms": plan.identifier_terms}
