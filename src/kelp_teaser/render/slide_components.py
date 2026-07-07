@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import Iterable
 
+from PIL import Image
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import PP_ALIGN
 from pptx.util import Emu, Inches, Pt
@@ -110,6 +111,30 @@ def draw_metric_tile(slide, x: Emu, y: Emu, w: Emu, h: Emu, tile: MetricTile) ->
         p.text = tile.subtext
         p.alignment = PP_ALIGN.CENTER
         _style_run(p.runs[0], size=Pt(9), color=theme.PALETTE["text_muted"])
+
+
+def add_picture_cover(slide, image_path: str, x, y, w, h):
+    """Place an image filling the (x,y,w,h) box while preserving aspect
+    ratio (scale-to-cover, centered). Returns the picture shape.
+
+    The image is scaled so the box is fully covered; overflow is centered.
+    This avoids the squashing that add_picture(width=w, height=h) causes.
+    """
+    with Image.open(image_path) as im:
+        iw, ih = im.size
+    box_ratio = w / h
+    img_ratio = iw / ih
+    if img_ratio > box_ratio:
+        # Image is wider than box: match height, overflow width.
+        new_h = h
+        new_w = int(h * img_ratio)
+    else:
+        # Image is taller than box: match width, overflow height.
+        new_w = w
+        new_h = int(w / img_ratio)
+    px = int(x - (new_w - w) / 2)
+    py = int(y - (new_h - h) / 2)
+    return slide.shapes.add_picture(image_path, px, py, int(new_w), int(new_h))
 
 
 def draw_bullet_list(slide, x: Emu, y: Emu, w: Emu, h: Emu,

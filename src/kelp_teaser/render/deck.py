@@ -15,6 +15,7 @@ from kelp_teaser.render.charts import render_chart
 from kelp_teaser.render.slide_components import (
     add_footer,
     add_header,
+    add_picture_cover,
     draw_bullet_list,
     draw_container,
     draw_metric_tile,
@@ -105,7 +106,7 @@ def _render_section(slide, section: ComposedSection, *, x, y, w, h) -> None:
         # the deck still renders.
         image_path = Path(section.image.path)
         if image_path.is_file():
-            slide.shapes.add_picture(str(image_path), x, y, width=w, height=h)
+            add_picture_cover(slide, str(image_path), x, y, w, h)
         else:
             placeholder_title = (section.heading or section.image.alt_text
                                  or "Image unavailable")
