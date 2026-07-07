@@ -28,9 +28,11 @@ xlsx_*.xml
 .DS_Store
 Thumbs.db
 
-# Optional: Ignore generated outputs if you only want to track code
+# v1 leftovers (old pipeline output / input samples, not part of v2)
 Final_Submissions/
-# *_ANALYSIS.json
+examples/
+*_ANALYSIS.json
+*_FULL_CONTEXT.txt
 
 # v2 outputs
 data/outputs/

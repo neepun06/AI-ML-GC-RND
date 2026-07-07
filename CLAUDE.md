@@ -10,13 +10,18 @@ The v2 architecture is documented in [docs/superpowers/specs/2026-05-16-agentic-
 
 ## Current status
 
-| Phase | Status | Branch / Tag | Tests |
-|---|---|---|---|
-| **Phase A — Foundation** (schemas, tools, renderers, theme, prompt loader scaffold) | Merged to `main` at `f7116f9` | `phase-a-foundation` (history only) | 61 ✓ |
-| **Phase B — Agents + LangGraph + CLI** (9 agents, parallel Composer fan-out, cost guardrails, v1 deletion) | Merged to `main` at `8e0ae16` | `phase-b-agents` (history only) | 101 ✓ |
-| **Phase C — Live API + polish** (this is what's next) | Not started | TBD | — |
+| Phase | Status | Tests |
+|---|---|---|
+| **Phase A — Foundation** (schemas, tools, renderers, theme, prompt loader scaffold) | Merged to `main` | ✓ |
+| **Phase B — Agents + LangGraph + CLI** (9 agents, parallel Composer fan-out, cost guardrails, v1 deletion) | Merged to `main` | ✓ |
+| **Phase C — Live API + polish** (5 observability fixes; live Gemini runs verified) | Merged to `main` | ✓ |
+| **Render + anonymization pass** (weighted-row layout so charts render, chart data labels, aspect-preserving hero images, side-by-side chart+commentary band, entity-aware anonymization) | Merged to `main` | ✓ |
 
-The branch this session lives on is **`main`**. `main` is local-only ahead of `origin/main` (Phase A+B is unpushed). Don't push without explicit user instruction.
+**Current test baseline: 119 passing** (stubbed, no live API). Run `venv/Scripts/python.exe -m pytest -q`.
+
+All work is on **`main`** (solo experimentation directly on main — the earlier two-worktree / phase-branch split was consolidated 2026-07-07). The pipeline runs live end-to-end on real data (~$0.01–0.02/deck with `KELP_MODEL_SMART=gemini-2.5-flash`).
+
+**Known limitations (intentionally left as "good enough"):** hero images are cover-fit and can overflow their box (slightly out of proportion); anonymization generalizes most but not all identifying entities, so the Critic may still flag a residual blocking leak on some runs. These are documented, not bugs to chase.
 
 ## How to work in this repo
 
@@ -108,19 +113,15 @@ These are load-bearing. Don't break them:
 - **Test discipline.** Every new agent or tool ships with unit tests in `tests/unit/`. LLM calls in tests are stubbed via `tests.fixtures.stub_llm.patch_llm()`. We do not mock python-pptx or pandas internals; tests build real `.pptx` files into `tmp_path` and assert on the output.
 - **Agent signature.** Every agent exposes `run(state: GraphState, *, trace_writer: TraceWriter | None = None) -> dict`. The dict is merged into state by LangGraph.
 - **Pure-function bias.** Agents return dicts, do not mutate state. Renderers consume final state and produce files; no LLM.
-- **Fail-soft at boundaries.** Tavily / Pexels / LlamaParse all return empty values on failure (logged). LLM calls retry up to `LLM_MAX_ATTEMPTS` (2) and then raise.
-- **Commits.** One logical change per commit. Real commit messages, not "WIP". Always include `Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>` when committing code Claude wrote.
+- **Fail-soft at boundaries.** Tavily / Pexels / LlamaParse all return empty values on failure (logged). LLM calls retry up to `LLM_MAX_ATTEMPTS` (3) and then raise; on a schema-validation failure, `complete_json` feeds the specific pydantic error back into the retry prompt so the model can self-correct.
+- **Commits.** One logical change per commit. Real commit messages, not "WIP". Author commits under the user's identity: `git -c user.name=SirCoolerArc -c user.email=rishabhxkumar@gmail.com commit ...`. Include a `Co-Authored-By: Claude <noreply@anthropic.com>` trailer when committing code Claude wrote.
 - **Workflow.** Significant work uses the `superpowers:*` skills: brainstorming → writing-plans → subagent-driven-development. For small changes, just do them.
 
-## Known polish items (deferred from Phase B final review)
+## Polish items — all DONE
 
-These are flagged in memory ([phase_c_polish_items.md](../../.claude/projects/c--Users-Rishabh-Kumar-PPT-Hackathon-AI-ML-GC-RND/memory/phase_c_polish_items.md)) and should be addressed in Phase C:
+The five Phase-B-review polish items are all implemented and merged: Critic `judgment_unavailable` synthetic warning; `cli.py` records real cost into `trace.json`; Researcher warns on zero Tavily hits; Composer surfaces ChartDesigner/ImageCurator failures as warnings; `render/deck.py` asserts contiguous slide indices. The render + anonymization pass (see status table) landed on top of these.
 
-1. `agents/critic.py` lines 98-102 — on LLM judgment failure, append a synthetic "judgment_unavailable" issue rather than silently returning `[]`.
-2. `cli.py` — call `trace.add_cost(tracker.total_cost_usd)` before `trace.finalize()`; the trace file currently always reports cost 0.
-3. `agents/researcher.py` — log a warning when Tavily returns zero hits across all queries.
-4. `agents/composer.py` lines 76-94 — Composer sub-call failures (ChartDesigner / ImageCurator) currently log silently; consider Critic-visible warnings when a planned chart/image is missing.
-5. `render/deck.py` — assert slide indices are contiguous 0..N-1.
+If picking the project back up, the two documented rough edges are the natural next targets: hero-image proportion (cover-fit overflow in `render/deck.py`'s `hero_image` branch + `add_picture_cover` in `render/slide_components.py`) and residual anonymization leaks (strengthen `agents/anonymizer.py` / the `identifier_terms` the Planner emits, or add a bounded Critic→Anonymizer revision pass — the latter was deferred to "v3" in the spec).
 
 ## What NOT to do
 
