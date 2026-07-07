@@ -27,9 +27,9 @@ from kelp_teaser.schemas.slide import ComposedSection, ComposedSlide
 # Height weight per section kind. Charts/images/quadrants need real vertical
 # room; metric/kpi strips are short. Bullets are medium.
 _ROW_WEIGHTS: dict[ComponentKind, int] = {
-    ComponentKind.chart: 3,
-    ComponentKind.hero_image: 3,
-    ComponentKind.quadrant: 3,
+    ComponentKind.chart: 5,
+    ComponentKind.hero_image: 5,
+    ComponentKind.quadrant: 4,
     ComponentKind.bullet_list: 2,
     ComponentKind.product_grid: 2,
     ComponentKind.metric_tile: 1,
@@ -125,10 +125,12 @@ def _render_section(slide, section: ComposedSection, *, x, y, w, h) -> None:
             cx += tile_w + theme.GUTTER
 
     elif section.kind == ComponentKind.chart and section.chart is not None:
-        draw_container(slide, x, y, w, h, title=section.heading)
+        # The chart's own title carries the heading, so we skip the container
+        # title and keep the vertical inset small to preserve plot height.
+        draw_container(slide, x, y, w, h)
         render_chart(slide,
-                     x + Inches(0.2), y + Inches(0.5),
-                     w - Inches(0.4), h - Inches(0.6),
+                     x + Inches(0.2), y + Inches(0.15),
+                     w - Inches(0.4), h - Inches(0.3),
                      section.chart)
 
     elif section.kind == ComponentKind.hero_image and section.image is not None:

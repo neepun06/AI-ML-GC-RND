@@ -29,6 +29,15 @@ from kelp_teaser.graph.trace import TraceWriter
 from kelp_teaser.schemas.slide import ComposedSlide
 
 
+def _keep_terms(existing: list | None, incoming: list | None) -> list:
+    """Reducer for identifier_terms written by parallel composer nodes.
+
+    All composers echo the same list; keep whichever is non-empty so the
+    value survives the fan-in intact.
+    """
+    return incoming or existing or []
+
+
 class _GraphDict(TypedDict, total=False):
     """LangGraph requires a TypedDict-shaped state with reducers per key.
 
@@ -45,6 +54,9 @@ class _GraphDict(TypedDict, total=False):
     sector_confidence: float | None
     sub_sector: str
     plan: object
+    # Written by parallel composer instances (all with the same value), so it
+    # needs a reducer; keep whichever non-empty list arrives.
+    identifier_terms: Annotated[list, _keep_terms]
     composed_slides: Annotated[dict[int, ComposedSlide], operator.or_]
     anonymization_log: list
     critic_report: object
@@ -134,6 +146,10 @@ def _composer_node_factory(trace_writer: TraceWriter | None,
                 "warnings": warnings,
                 "warning_count": len(warnings),
             })
-        return {"composed_slides": {idx: composed}}
+        # Echo identifier_terms back so it survives the parallel fan-in
+        # (the Send fan-out carried it in, but only keys returned here are
+        # merged into the post-composer state the Anonymizer reads).
+        return {"composed_slides": {idx: composed},
+                "identifier_terms": state_obj.identifier_terms}
 
     return composer_one
